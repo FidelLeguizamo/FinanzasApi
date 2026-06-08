@@ -414,6 +414,33 @@ header h1 {
     min-height: 320px;
 }
 
+.chart-center {
+    align-items: center;
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    left: 50%;
+    pointer-events: none;
+    position: absolute;
+    text-align: center;
+    top: 44%;
+    transform: translate(-50%, -50%);
+}
+
+.chart-center span {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.chart-center strong {
+    color: var(--text-title);
+    font-size: 1.25rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
 .chart-empty {
     position: absolute;
     inset: 0;

@@ -115,7 +115,7 @@
                     </div>
                     <div class="form-group">
                         <label>Descripción</label>
-                        <input type="text" id="gasto-desc" required placeholder="Supermercado, Nafta, Luz...">
+                        <input type="text" id="gasto-desc" required placeholder="Pase de batalla, comida, figuritas...">
                     </div>
                     <div class="form-group">
                         <label>Categoría</label>
@@ -154,15 +154,19 @@
         <div class="chart-section">
             <div class="chart-copy">
                 <span class="eyebrow">Análisis de gastos</span>
-                <h3>Promedio por categoría</h3>
-                <p class="chart-subtitle">Compará cuánto gastás en promedio en cada categoría registrada.</p>
+                <h3>Gastos por categoría</h3>
+                <p class="chart-subtitle">Mirá cómo se reparte el total de tus gastos por categoría.</p>
             </div>
             <div class="chart-layout">
                 <div class="chart-container">
                     <canvas id="canvas-gastos"></canvas>
+                    <div id="chart-center" class="chart-center hidden">
+                        <span>Total gastado</span>
+                        <strong id="chart-total">$0,00</strong>
+                    </div>
                     <div id="chart-empty" class="chart-empty hidden">
                         <strong>Sin gastos todavía</strong>
-                        <span>Registrá tu primer gasto para ver el promedio por categoría.</span>
+                        <span>Registrá tu primer gasto para ver la distribución por categoría.</span>
                     </div>
                 </div>
                 <div id="category-summary" class="category-summary"></div>

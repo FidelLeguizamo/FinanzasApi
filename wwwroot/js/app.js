@@ -227,59 +227,56 @@ function normalizarCategorias(categoriasApi) {
                 cantidad: Number(encontrada.cantidad || 0)
             };
         })
-        .sort((a, b) => b.promedio - a.promedio);
+        .sort((a, b) => b.total - a.total);
 }
 
 function renderGrafico(categorias) {
     const ctx = document.getElementById('canvas-gastos').getContext('2d');
     const emptyState = document.getElementById('chart-empty');
-    const hayGastos = categorias.some(categoria => categoria.promedio > 0);
+    const centerState = document.getElementById('chart-center');
+    const totalState = document.getElementById('chart-total');
+    const totalGastos = categorias.reduce((total, categoria) => total + categoria.total, 0);
+    const hayGastos = totalGastos > 0;
 
     if (chartGastos) {
         chartGastos.destroy();
     }
 
     emptyState.classList.toggle('hidden', hayGastos);
+    centerState.classList.toggle('hidden', !hayGastos);
+    totalState.textContent = new Intl.NumberFormat('es-AR', {
+        style: 'currency',
+        currency: 'ARS'
+    }).format(totalGastos);
 
     chartGastos = new Chart(ctx, {
-        type: 'bar',
+        type: 'doughnut',
         data: {
             labels: categorias.map(categoria => categoria.nombre),
             datasets: [{
-                label: 'Promedio por gasto',
-                data: categorias.map(categoria => categoria.promedio),
+                label: 'Total gastado',
+                data: categorias.map(categoria => categoria.total),
                 backgroundColor: categorias.map(categoria => categoria.color),
-                borderRadius: 8,
-                borderSkipped: false,
-                maxBarThickness: 44
+                borderColor: '#ffffff',
+                borderWidth: 4,
+                hoverOffset: 8
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            scales: {
-                x: {
-                    grid: { display: false },
-                    ticks: {
-                        color: '#475569',
-                        font: { family: 'Inter', size: 12, weight: '600' }
+            cutout: '68%',
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 12,
+                        color: '#334155',
+                        font: { family: 'Inter', size: 12, weight: '600' },
+                        padding: 16
                     }
                 },
-                y: {
-                    beginAtZero: true,
-                    grid: { color: '#e2e8f0' },
-                    ticks: {
-                        color: '#64748b',
-                        callback: value => new Intl.NumberFormat('es-AR', {
-                            style: 'currency',
-                            currency: 'ARS',
-                            maximumFractionDigits: 0
-                        }).format(value)
-                    }
-                }
-            },
-            plugins: {
-                legend: { display: false },
                 tooltip: {
                     backgroundColor: '#0f172a',
                     bodyFont: { family: 'Inter', size: 13 },
@@ -291,9 +288,12 @@ function renderGrafico(categorias) {
                             const valor = new Intl.NumberFormat('es-AR', {
                                 style: 'currency',
                                 currency: 'ARS'
-                            }).format(context.parsed.y || 0);
+                            }).format(context.parsed || 0);
+                            const porcentaje = totalGastos > 0
+                                ? Math.round((Number(context.parsed || 0) / totalGastos) * 100)
+                                : 0;
 
-                            return `Promedio: ${valor}`;
+                            return `${context.label}: ${valor} (${porcentaje}%)`;
                         }
                     }
                 }
@@ -323,9 +323,9 @@ function renderResumenCategorias(categorias, formatter) {
         meta.className = 'category-meta';
 
         left.append(dot, document.createTextNode(categoria.nombre));
-        average.textContent = formatter.format(categoria.promedio);
+        average.textContent = formatter.format(categoria.total);
         count.textContent = `${categoria.cantidad} gasto${categoria.cantidad === 1 ? '' : 's'}`;
-        total.textContent = `Total ${formatter.format(categoria.total)}`;
+        total.textContent = categoria.cantidad > 0 ? `Prom. ${formatter.format(categoria.promedio)}` : 'Sin gastos';
 
         name.append(left, average);
         meta.append(count, total);
