@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using FinanzasApi.Data;
 using FinanzasApi.Models;
@@ -19,7 +19,6 @@ namespace FinanzasApi.Controllers
             _context = context;
         }
 
-
         [HttpPost]
         public async Task<IActionResult> CrearGasto([FromBody] Gasto nuevoGasto)
         {
@@ -30,8 +29,19 @@ namespace FinanzasApi.Controllers
 
             try
             {
-                if (nuevoGasto.Fecha == DateTime.MinValue) nuevoGasto.Fecha = DateTime.UtcNow;
-                else nuevoGasto.Fecha = DateTime.SpecifyKind(nuevoGasto.Fecha, DateTimeKind.Utc);
+                if (nuevoGasto.Fecha == DateTime.MinValue)
+                {
+                    nuevoGasto.Fecha = DateTime.UtcNow;
+                }
+                else
+                {
+                    nuevoGasto.Fecha = DateTime.SpecifyKind(nuevoGasto.Fecha, DateTimeKind.Utc);
+                }
+
+                if (nuevoGasto.Fecha.Date > HoyArgentina())
+                {
+                    return BadRequest("No se pueden registrar gastos con fecha futura.");
+                }
 
                 _context.Gastos.Add(nuevoGasto);
                 await _context.SaveChangesAsync();
@@ -42,7 +52,6 @@ namespace FinanzasApi.Controllers
                 return StatusCode(500, $"Error: {ex.Message}");
             }
         }
-
 
         [HttpGet("dashboard/{idUsuario}")]
         public async Task<IActionResult> ObtenerDashboard(int idUsuario)
@@ -83,9 +92,9 @@ namespace FinanzasApi.Controllers
                 {
                     datos = new
                     {
-                        totalIngresos = totalIngresos,
-                        totalGastos = totalGastos,
-                        balance = balance,
+                        totalIngresos,
+                        totalGastos,
+                        balance,
                         categorias = gastosPorCategoria
                     }
                 });
@@ -94,6 +103,63 @@ namespace FinanzasApi.Controllers
             {
                 return StatusCode(500, $"Error: {ex.Message}");
             }
+        }
+
+        [HttpGet("historial/{idUsuario}")]
+        public async Task<IActionResult> ObtenerHistorial(int idUsuario)
+        {
+            try
+            {
+                var categorias = await _context.Categorias.ToListAsync();
+
+                var ingresos = await _context.Ingresos
+                    .Where(i => i.IdUsuario == idUsuario)
+                    .Select(i => new
+                    {
+                        tipo = "Ingreso",
+                        categoria = i.Categoria,
+                        descripcion = i.Descripcion,
+                        monto = i.Monto,
+                        fecha = i.Fecha
+                    })
+                    .ToListAsync();
+
+                var gastosRaw = await _context.Gastos
+                    .Where(g => g.IdUsuario == idUsuario)
+                    .Select(g => new
+                    {
+                        g.IdCategoria,
+                        g.Descripcion,
+                        g.Monto,
+                        g.Fecha
+                    })
+                    .ToListAsync();
+
+                var gastos = gastosRaw.Select(g => new
+                {
+                    tipo = "Gasto",
+                    categoria = categorias.FirstOrDefault(c => c.IdCategoria == g.IdCategoria)?.Nombre ?? $"Categoría {g.IdCategoria}",
+                    descripcion = g.Descripcion,
+                    monto = g.Monto,
+                    fecha = g.Fecha
+                });
+
+                var historial = ingresos
+                    .Concat(gastos)
+                    .OrderByDescending(m => m.fecha)
+                    .ToList();
+
+                return Ok(new { datos = historial });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
+        }
+
+        private static DateTime HoyArgentina()
+        {
+            return DateTime.UtcNow.AddHours(-3).Date;
         }
     }
 }

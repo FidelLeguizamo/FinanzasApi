@@ -251,6 +251,125 @@ header h1 {
     margin-bottom: 24px;
 }
 
+.history-section {
+    background-color: var(--surface);
+    padding: 28px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    margin-bottom: 32px;
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.history-header h3 {
+    color: var(--text-title);
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin: 0 0 6px 0;
+}
+
+.history-header p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.movimientos-list {
+    display: grid;
+    gap: 12px;
+}
+
+.movimiento-item {
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-left: 5px solid var(--primary);
+    border-radius: var(--radius-md);
+    display: grid;
+    gap: 12px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 14px 16px;
+}
+
+.movimiento-item.ingreso {
+    border-left-color: var(--success);
+}
+
+.movimiento-item.gasto {
+    border-left-color: var(--danger);
+}
+
+.movimiento-main {
+    min-width: 0;
+}
+
+.movimiento-top {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.movimiento-badge {
+    border-radius: 999px;
+    color: white;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 4px 8px;
+    text-transform: uppercase;
+}
+
+.movimiento-badge.ingreso {
+    background-color: var(--success);
+}
+
+.movimiento-badge.gasto {
+    background-color: var(--danger);
+}
+
+.movimiento-category {
+    color: var(--text-title);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.movimiento-date,
+.movimiento-desc {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.movimiento-monto {
+    color: var(--text-title);
+    font-size: 1rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.movimiento-monto.ingreso {
+    color: var(--success);
+}
+
+.movimiento-monto.gasto {
+    color: var(--danger);
+}
+
+.history-empty {
+    color: var(--text-muted);
+    background: #f8fafc;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    text-align: center;
+}
+
 .chart-section {
     background-color: var(--surface);
     padding: 32px;
@@ -381,11 +500,20 @@ header h1 {
 
     .auth-box,
     .panel-section,
+    .history-section,
     .chart-section {
         padding: 24px;
     }
 
     .card-value {
         font-size: 1.6rem;
+    }
+
+    .movimiento-item {
+        grid-template-columns: 1fr;
+    }
+
+    .movimiento-monto {
+        white-space: normal;
     }
 }

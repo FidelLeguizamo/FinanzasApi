@@ -2,17 +2,20 @@ const API_URL = "/api";
 let chartGastos = null;
 
 const categoriasBase = [
-    { id: 1, nombre: 'Alimentación', color: '#2563eb' },
-    { id: 2, nombre: 'Transporte', color: '#06b6d4' },
-    { id: 3, nombre: 'Servicios', color: '#8b5cf6' },
-    { id: 4, nombre: 'Entretenimiento', color: '#f59e0b' },
-    { id: 5, nombre: 'Salud', color: '#10b981' },
-    { id: 6, nombre: 'Educación', color: '#f43f5e' }
+    { id: 1, nombre: 'Comida y snacks', color: '#2563eb' },
+    { id: 2, nombre: 'Entretenimiento', color: '#f59e0b' },
+    { id: 3, nombre: 'Educación', color: '#8b5cf6' },
+    { id: 4, nombre: 'Transporte', color: '#06b6d4' },
+    { id: 5, nombre: 'Ropa y accesorios', color: '#ec4899' },
+    { id: 6, nombre: 'Tecnología y juegos', color: '#6366f1' },
+    { id: 7, nombre: 'Salud y cuidado', color: '#10b981' },
+    { id: 8, nombre: 'Regalos y salidas', color: '#f43f5e' }
 ];
 
 window.addEventListener('DOMContentLoaded', () => {
-    const cachedUserId = localStorage.getItem('userId');
+    limitarFechasHastaHoy();
 
+    const cachedUserId = localStorage.getItem('userId');
     if (cachedUserId) {
         showDashboard();
     } else {
@@ -47,10 +50,8 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
 
         if (response.ok) {
             const usuario = await response.json();
-
             localStorage.setItem('userId', usuario.IdUsuario);
             localStorage.setItem('userName', usuario.Nombre);
-
             showDashboard();
         } else {
             alert("❌ Credenciales incorrectas. Verificá tu correo y contraseña.");
@@ -102,28 +103,37 @@ function showDashboard() {
     const name = localStorage.getItem('userName') || 'Usuario';
     document.getElementById('welcome-text').innerText = `Hola, ${name} 👋`;
 
+    limitarFechasHastaHoy();
     actualizarDashboard();
 }
 
 document.getElementById('ingreso-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const monto = parseFloat(document.getElementById('ingreso-monto').value);
+    const categoria = document.getElementById('ingreso-categoria').value;
     const descripcion = document.getElementById('ingreso-desc').value.trim();
     const fecha = document.getElementById('ingreso-fecha').value;
     const idUsuario = parseInt(localStorage.getItem('userId'));
+
+    if (esFechaFutura(fecha)) {
+        alert("No se pueden registrar ingresos a futuro.");
+        return;
+    }
 
     try {
         const response = await fetch(`${API_URL}/ingresos`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ idUsuario, monto, descripcion, fecha })
+            body: JSON.stringify({ idUsuario, monto, categoria, descripcion, fecha })
         });
 
         if (response.ok) {
             actualizarDashboard();
             e.target.reset();
+            limitarFechasHastaHoy();
         } else {
-            alert("No se pudo guardar el ingreso. Verificá los campos.");
+            const errorText = await response.text();
+            alert(errorText || "No se pudo guardar el ingreso. Verificá los campos.");
         }
     } catch (error) {
         console.error("Error al registrar ingreso:", error);
@@ -138,6 +148,11 @@ document.getElementById('gasto-form').addEventListener('submit', async (e) => {
     const fecha = document.getElementById('gasto-fecha').value;
     const idUsuario = parseInt(localStorage.getItem('userId'));
 
+    if (esFechaFutura(fecha)) {
+        alert("No se pueden registrar gastos a futuro.");
+        return;
+    }
+
     try {
         const response = await fetch(`${API_URL}/gastos`, {
             method: 'POST',
@@ -148,8 +163,10 @@ document.getElementById('gasto-form').addEventListener('submit', async (e) => {
         if (response.ok) {
             actualizarDashboard();
             e.target.reset();
+            limitarFechasHastaHoy();
         } else {
-            alert("No se pudo guardar el gasto. Verificá los campos.");
+            const errorText = await response.text();
+            alert(errorText || "No se pudo guardar el gasto. Verificá los campos.");
         }
     } catch (error) {
         console.error("Error al registrar gasto:", error);
@@ -175,8 +192,25 @@ async function actualizarDashboard() {
         const categorias = normalizarCategorias(data.categorias || []);
         renderGrafico(categorias);
         renderResumenCategorias(categorias, formatter);
+        actualizarHistorial(formatter);
     } catch (error) {
         console.error("Error al conectar con el endpoint del dashboard:", error);
+    }
+}
+
+async function actualizarHistorial(formatter) {
+    const idUsuario = localStorage.getItem('userId');
+    const list = document.getElementById('movimientos-list');
+    if (!idUsuario || !list) return;
+
+    try {
+        const response = await fetch(`${API_URL}/gastos/historial/${idUsuario}`);
+        if (!response.ok) throw new Error("Error al obtener historial");
+
+        const resData = await response.json();
+        renderHistorial(resData.datos || [], formatter);
+    } catch (error) {
+        console.error("Error al conectar con el historial:", error);
     }
 }
 
@@ -245,9 +279,7 @@ function renderGrafico(categorias) {
                 }
             },
             plugins: {
-                legend: {
-                    display: false
-                },
+                legend: { display: false },
                 tooltip: {
                     backgroundColor: '#0f172a',
                     bodyFont: { family: 'Inter', size: 13 },
@@ -300,4 +332,74 @@ function renderResumenCategorias(categorias, formatter) {
         item.append(name, meta);
         summary.appendChild(item);
     });
+}
+
+function renderHistorial(movimientos, formatter) {
+    const list = document.getElementById('movimientos-list');
+    list.innerHTML = '';
+
+    if (!movimientos.length) {
+        const empty = document.createElement('div');
+        empty.className = 'history-empty';
+        empty.textContent = 'Todavía no hay movimientos registrados.';
+        list.appendChild(empty);
+        return;
+    }
+
+    movimientos.forEach(movimiento => {
+        const tipo = movimiento.tipo.toLowerCase();
+        const item = document.createElement('div');
+        const main = document.createElement('div');
+        const top = document.createElement('div');
+        const badge = document.createElement('span');
+        const category = document.createElement('span');
+        const date = document.createElement('span');
+        const desc = document.createElement('div');
+        const amount = document.createElement('div');
+
+        item.className = `movimiento-item ${tipo}`;
+        main.className = 'movimiento-main';
+        top.className = 'movimiento-top';
+        badge.className = `movimiento-badge ${tipo}`;
+        category.className = 'movimiento-category';
+        date.className = 'movimiento-date';
+        desc.className = 'movimiento-desc';
+        amount.className = `movimiento-monto ${tipo}`;
+
+        badge.textContent = movimiento.tipo;
+        category.textContent = movimiento.categoria || 'Sin categoría';
+        date.textContent = formatearFecha(movimiento.fecha);
+        desc.textContent = movimiento.descripcion || 'Sin descripción';
+        amount.textContent = `${tipo === 'ingreso' ? '+' : '-'} ${formatter.format(movimiento.monto)}`;
+
+        top.append(badge, category, date);
+        main.append(top, desc);
+        item.append(main, amount);
+        list.appendChild(item);
+    });
+}
+
+function limitarFechasHastaHoy() {
+    const hoy = obtenerFechaActualInput();
+    document.getElementById('ingreso-fecha').max = hoy;
+    document.getElementById('gasto-fecha').max = hoy;
+}
+
+function obtenerFechaActualInput() {
+    const hoy = new Date();
+    const offset = hoy.getTimezoneOffset();
+    const local = new Date(hoy.getTime() - offset * 60000);
+    return local.toISOString().slice(0, 10);
+}
+
+function esFechaFutura(fecha) {
+    return Boolean(fecha) && fecha > obtenerFechaActualInput();
+}
+
+function formatearFecha(fecha) {
+    return new Intl.DateTimeFormat('es-AR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    }).format(new Date(fecha));
 }
