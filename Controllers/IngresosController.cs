@@ -37,7 +37,7 @@ namespace FinanzasApi.Controllers
                 }
                 else
                 {
-                    nuevoIngreso.Fecha = DateTime.SpecifyKind(nuevoIngreso.Fecha, DateTimeKind.Utc);
+                    nuevoIngreso.Fecha = DateTime.SpecifyKind(nuevoIngreso.Fecha.Date.AddHours(12), DateTimeKind.Utc);
                 }
 
                 if (nuevoIngreso.Fecha.Date > HoyArgentina())

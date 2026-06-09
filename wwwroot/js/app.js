@@ -397,6 +397,15 @@ function esFechaFutura(fecha) {
 }
 
 function formatearFecha(fecha) {
+    if (typeof fecha === 'string') {
+        const soloFecha = fecha.slice(0, 10);
+        const partes = soloFecha.split('-');
+
+        if (partes.length === 3) {
+            return `${partes[2]}/${partes[1]}/${partes[0]}`;
+        }
+    }
+
     return new Intl.DateTimeFormat('es-AR', {
         day: '2-digit',
         month: '2-digit',

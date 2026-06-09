@@ -5,6 +5,7 @@ using FinanzasApi.Models;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace FinanzasApi.Controllers
 {
@@ -13,6 +14,17 @@ namespace FinanzasApi.Controllers
     public class GastosController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private static readonly Dictionary<int, string> CategoriasGasto = new()
+        {
+            { 1, "Comida y snacks" },
+            { 2, "Entretenimiento" },
+            { 3, "Educación" },
+            { 4, "Transporte" },
+            { 5, "Ropa y accesorios" },
+            { 6, "Tecnología y juegos" },
+            { 7, "Salud y cuidado" },
+            { 8, "Regalos y salidas" }
+        };
 
         public GastosController(AppDbContext context)
         {
@@ -35,7 +47,7 @@ namespace FinanzasApi.Controllers
                 }
                 else
                 {
-                    nuevoGasto.Fecha = DateTime.SpecifyKind(nuevoGasto.Fecha, DateTimeKind.Utc);
+                    nuevoGasto.Fecha = DateTime.SpecifyKind(nuevoGasto.Fecha.Date.AddHours(12), DateTimeKind.Utc);
                 }
 
                 if (nuevoGasto.Fecha.Date > HoyArgentina())
@@ -74,18 +86,16 @@ namespace FinanzasApi.Controllers
                     })
                     .ToListAsync();
 
-                var categorias = await _context.Categorias.ToListAsync();
-
                 var gastosPorCategoria = resumenPorCategoria
                     .Select(resumen => new
                     {
                         categoriaId = resumen.CategoriaId,
-                        categoria = categorias.FirstOrDefault(c => c.IdCategoria == resumen.CategoriaId)?.Nombre ?? $"Categoría {resumen.CategoriaId}",
+                        categoria = NombreCategoria(resumen.CategoriaId),
                         total = resumen.Total,
                         promedio = resumen.Promedio,
                         cantidad = resumen.Cantidad
                     })
-                    .OrderByDescending(categoria => categoria.promedio)
+                    .OrderByDescending(categoria => categoria.total)
                     .ToList();
 
                 return Ok(new
@@ -110,17 +120,16 @@ namespace FinanzasApi.Controllers
         {
             try
             {
-                var categorias = await _context.Categorias.ToListAsync();
-
                 var ingresos = await _context.Ingresos
                     .Where(i => i.IdUsuario == idUsuario)
                     .Select(i => new
                     {
+                        id = i.IdIngreso,
                         tipo = "Ingreso",
                         categoria = i.Categoria,
                         descripcion = i.Descripcion,
                         monto = i.Monto,
-                        fecha = i.Fecha
+                        fecha = i.Fecha.Date
                     })
                     .ToListAsync();
 
@@ -128,17 +137,19 @@ namespace FinanzasApi.Controllers
                     .Where(g => g.IdUsuario == idUsuario)
                     .Select(g => new
                     {
+                        g.IdGasto,
                         g.IdCategoria,
                         g.Descripcion,
                         g.Monto,
-                        g.Fecha
+                        Fecha = g.Fecha.Date
                     })
                     .ToListAsync();
 
                 var gastos = gastosRaw.Select(g => new
                 {
+                    id = g.IdGasto,
                     tipo = "Gasto",
-                    categoria = categorias.FirstOrDefault(c => c.IdCategoria == g.IdCategoria)?.Nombre ?? $"Categoría {g.IdCategoria}",
+                    categoria = NombreCategoria(g.IdCategoria),
                     descripcion = g.Descripcion,
                     monto = g.Monto,
                     fecha = g.Fecha
@@ -147,6 +158,7 @@ namespace FinanzasApi.Controllers
                 var historial = ingresos
                     .Concat(gastos)
                     .OrderByDescending(m => m.fecha)
+                    .ThenByDescending(m => m.id)
                     .ToList();
 
                 return Ok(new { datos = historial });
@@ -160,6 +172,13 @@ namespace FinanzasApi.Controllers
         private static DateTime HoyArgentina()
         {
             return DateTime.UtcNow.AddHours(-3).Date;
+        }
+
+        private static string NombreCategoria(int idCategoria)
+        {
+            return CategoriasGasto.TryGetValue(idCategoria, out var nombre)
+                ? nombre
+                : $"Categoría {idCategoria}";
         }
     }
 }
